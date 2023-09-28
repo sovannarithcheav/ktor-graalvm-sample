@@ -1,22 +1,24 @@
 package com.example.plugins
 
 import com.example.dao.ArangoDBModule
-import com.example.dao.ListDTO
 import com.example.dao.User
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.databind.SerializationFeature
-import io.ktor.http.*
+import com.oracle.svm.core.annotate.Inject
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
-import org.json.JSONObject
 import io.ktor.serialization.jackson.*
+import org.koin.java.KoinJavaComponent.inject
+import org.springframework.context.ApplicationContext
 
 fun Application.configureRouting() {
+    val arangoDB = ArangoDBModule().createDatabaseConnection()
+    val appContext by inject<ApplicationContext>(ApplicationContext::class.java)
     routing {
         install(ContentNegotiation) {
             json(Json {
@@ -33,7 +35,8 @@ fun Application.configureRouting() {
             }
         }
             get("/") {
-            call.respondText("Hello world")
+            val users = arangoDB.db("HRM").query("FOR u IN USERS RETURN u", Any::class.java).asListRemaining()
+            call.respond(users)
         }
     }
 }
